@@ -15,16 +15,14 @@ use brokiem\snpc\entity\BaseNPC;
 use brokiem\snpc\entity\CustomHuman;
 use brokiem\snpc\entity\WalkingHuman;
 use brokiem\snpc\manager\NPCManager;
-use brokiem\updatechecker\Promise;
-use brokiem\updatechecker\UpdateChecker;
-use EasyUI\EasyForm;
+use brokiem\snpc\task\DoEmoteTask;
+use brokiem\snpc\libs\EasyUI\Form;
 use pocketmine\entity\Entity;
 use pocketmine\entity\EntityDataHelper;
 use pocketmine\entity\EntityFactory;
 use pocketmine\entity\Human;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\plugin\PluginBase;
-use pocketmine\scheduler\ClosureTask;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\world\World;
 
@@ -44,7 +42,7 @@ class SimpleNPC extends PluginBase {
     public const IS_DEV = true;
 
     protected function onEnable(): void {
-        if (!class_exists(EasyForm::class)) {
+        if (!class_exists(Form::class)) {
             $this->getLogger()->alert("UI/Form dependency not found! Please download this plugin from poggit or install the UI/Form virion. Disabling plugin...");
             $this->getServer()->getPluginManager()->disablePlugin($this);
             return;
@@ -63,13 +61,15 @@ class SimpleNPC extends PluginBase {
         $this->getServer()->getCommandMap()->registerAll("SimpleNPC", [new Commands("snpc", $this), new RcaCommand("rca", $this)]);
         $this->getServer()->getPluginManager()->registerEvents(new EventHandler($this), $this);
 
-        $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
-            UpdateChecker::checkUpdate($this->getDescription()->getName(), $promise = new Promise());
+        $this->getScheduler()->scheduleRepeatingTask(new DoEmoteTask(), $this->getConfig()->get("emote-interval-seconds", 7) * 20);
+
+        /*$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function(): void {
+            UpdateChecker::checkUpdate($this->getDescription()->getName(), $this->getDescription()->getVersion(), $promise = new Promise());
 
             $promise->then(function($data) {
                 $this->cachedUpdate = [$data["version"], $data["last_state_change_date"], $data["html_url"]];
             });
-        }), 864000); // 12 hours
+        }), 864000); // 12 hours*/
     }
 
     public static function registerEntity(string $entityClass, string $name, array $saveNames = []): void {

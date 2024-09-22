@@ -11,20 +11,22 @@ namespace brokiem\snpc\manager\form;
 
 use brokiem\snpc\entity\BaseNPC;
 use brokiem\snpc\entity\CustomHuman;
+use brokiem\snpc\entity\EmoteIds;
 use brokiem\snpc\entity\WalkingHuman;
 use brokiem\snpc\SimpleNPC;
 use brokiem\snpc\task\async\URLToCapeTask;
 use brokiem\snpc\task\async\URLToSkinTask;
-use EasyUI\element\Button;
-use EasyUI\element\Dropdown;
-use EasyUI\element\Input;
-use EasyUI\element\Option;
-use EasyUI\utils\FormResponse;
-use EasyUI\variant\CustomForm;
-use EasyUI\variant\SimpleForm;
+use brokiem\snpc\libs\EasyUI\element\Button;
+use brokiem\snpc\libs\EasyUI\element\Dropdown;
+use brokiem\snpc\libs\EasyUI\element\Input;
+use brokiem\snpc\libs\EasyUI\element\Option;
+use brokiem\snpc\libs\EasyUI\utils\FormResponse;
+use brokiem\snpc\libs\EasyUI\variant\CustomForm;
+use brokiem\snpc\libs\EasyUI\variant\SimpleForm;
+use InvalidArgumentException;
 use pocketmine\entity\Entity;
 use pocketmine\entity\Skin;
-use pocketmine\item\ItemIds;
+use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use pocketmine\utils\SingletonTrait;
 use pocketmine\utils\TextFormat;
@@ -94,8 +96,8 @@ class FormManager {
         $sender->sendForm($form);
         $cusForm->setSubmitListener(function(Player $player, FormResponse $response) use ($plugin) {
             $type = $response->getDropdownSubmittedOptionId("type") === null ? "" : strtolower($response->getDropdownSubmittedOptionId("type"));
-            $nametag = $response->getInputSubmittedText("nametag") === "" ? $player->getName() : $response->getInputSubmittedText("nametag");
-            $skin = $response->getInputSubmittedText("skin") === "null" ? "" : $response->getInputSubmittedText("skin");
+            $nametag = $response->getInputSubmittedText("nametag") === null ? $player->getName() : $response->getInputSubmittedText("nametag");
+            $skin = $response->getInputSubmittedText("skin") === "null" ? null : $response->getInputSubmittedText("skin");
             $npcEditId = $response->getInputSubmittedText("snpcid_edit");
 
             if ($npcEditId != "") {
@@ -144,6 +146,38 @@ class FormManager {
                                 $entity->setCanLookToPlayers(true);
                                 $sender->sendMessage(TextFormat::GREEN . "Successfully enable npc rotate (NPC ID: " . $entity->getId() . ")");
                                 break;
+                            case "setClickEmote":
+                                $clickEmoteUI = new SimpleForm("Edit Click-Emote", "Please choose a new click-emote.");
+                                if ($entity->getClickEmoteId() !== null) $clickEmoteUI->addButton(new Button(
+                                    "§cRemove Click-Emote", null,
+                                    function (Player $player) use ($entity) {
+                                        $entity->setClickEmoteId(null);
+                                        $player->sendMessage("§aSuccessfully removed the click-emote of NPC ID: " . $entity->getId());
+                                    }));
+                                foreach (EmoteIds::EMOTES as $emoteName => $emoteId)
+                                    $clickEmoteUI->addButton(new Button($emoteName, null,
+                                        function (Player $player) use ($entity, $emoteId, $emoteName) {
+                                            $entity->setClickEmoteId($emoteId);
+                                            $player->sendMessage("§aSuccessfully set the click-emote of NPC ID: " . $entity->getId() . " to §7" . $emoteName);
+                                        }));
+                                $sender->sendForm($clickEmoteUI);
+                                break;
+                            case "setEmote":
+                                $emoteUI = new SimpleForm("Edit Emote", "Please choose a new emote.");
+                                if ($entity->getEmoteId() !== null) $emoteUI->addButton(new Button(
+                                    "§cRemove Emote", null,
+                                    function (Player $player) use ($entity) {
+                                        $entity->setEmoteId(null);
+                                        $player->sendMessage("§aSuccessfully removed the emote of NPC ID: " . $entity->getId());
+                                    }));
+                                foreach (EmoteIds::EMOTES as $emoteName => $emoteId)
+                                    $emoteUI->addButton(new Button($emoteName, null,
+                                        function (Player $player) use ($entity, $emoteId, $emoteName) {
+                                            $entity->setEmoteId($emoteId);
+                                            $player->sendMessage("§aSuccessfully set the emote of NPC ID: " . $entity->getId() . " to §7" . $emoteName);
+                                        }));
+                                $sender->sendForm($emoteUI);
+                                break;
                             case "setArmor":
                                 if ($entity instanceof CustomHuman) {
                                     $entity->applyArmorFrom($sender);
@@ -154,7 +188,7 @@ class FormManager {
                                 break;
                             case "setHeld":
                                 if ($entity instanceof CustomHuman) {
-                                    if ($sender->getInventory()->getItemInHand()->getId() === ItemIds::AIR) {
+                                    if ($sender->getInventory()->getItemInHand()->equals(VanillaItems::AIR(), false ,false)) {
                                         $sender->sendMessage(TextFormat::RED . "Please hold the item in your hand");
                                     } else {
                                         $entity->sendHeldItemFrom($sender);
@@ -219,14 +253,38 @@ class FormManager {
             }
 
             $customForm->setSubmitListener(function(Player $player, FormResponse $response) use ($plugin, $entity) {
-                $addcmd = $response->getInputSubmittedText("addcmd");
-                $rmcmd = $response->getInputSubmittedText("removecmd");
-                $chnmtd = $response->getInputSubmittedText("changenametag");
-                $scale = $response->getInputSubmittedText("changescale");
-                $skin = $response->getInputSubmittedText("changeskin");
-                $cape = $response->getInputSubmittedText("changecape");
+                try {
+                    $addcmd = $response->getInputSubmittedText("addcmd");
+                } catch (InvalidArgumentException) {
+                    $addcmd = null;
+                }
+                try {
+                    $rmcmd = $response->getInputSubmittedText("removecmd");
+                } catch (InvalidArgumentException) {
+                    $rmcmd = null;
+                }
+                try {
+                    $chnmtd = $response->getInputSubmittedText("changenametag");
+                } catch (InvalidArgumentException) {
+                    $chnmtd = null;
+                }
+                try {
+                    $scale = $response->getInputSubmittedText("changescale");
+                } catch (InvalidArgumentException) {
+                    $scale = null;
+                }
+                try {
+                    $skin = $response->getInputSubmittedText("changeskin");
+                } catch (InvalidArgumentException) {
+                    $skin = null;
+                }
+                try {
+                    $cape = $response->getInputSubmittedText("changecape");
+                } catch (InvalidArgumentException) {
+                    $cape = null;
+                }
 
-                if ($rmcmd != "") {
+                if ($rmcmd !== null) {
                     if (!in_array($rmcmd, $entity->getCommandManager()->getAll(), true)) {
                         $player->sendMessage(TextFormat::RED . "Command '$rmcmd' not found in command list.");
                         return;
@@ -234,7 +292,7 @@ class FormManager {
 
                     $entity->getCommandManager()->remove($rmcmd);
                     $player->sendMessage(TextFormat::GREEN . "Successfully remove command '$rmcmd' (NPC ID: " . $entity->getId() . ")");
-                } elseif ($addcmd != "") {
+                } elseif ($addcmd !== null) {
                     if (in_array($addcmd, $entity->getCommandManager()->getAll(), true)) {
                         $player->sendMessage(TextFormat::RED . "Command '$addcmd' has already been added.");
                         return;
@@ -242,12 +300,12 @@ class FormManager {
 
                     $entity->getCommandManager()->add($addcmd);
                     $player->sendMessage(TextFormat::GREEN . "Successfully added command '$addcmd' (NPC ID: " . $entity->getId() . ")");
-                } elseif ($chnmtd != "") {
+                } elseif ($chnmtd !== null) {
                     $player->sendMessage(TextFormat::GREEN . "Successfully change npc nametag from '{$entity->getNameTag()}' to '$chnmtd'  (NPC ID: " . $entity->getId() . ")");
 
                     $entity->setNameTag(str_replace("{line}", "\n", $chnmtd));
                     $entity->setNameTagAlwaysVisible();
-                } elseif ($cape != "") {
+                } elseif ($cape !== null) {
                     if (!$entity instanceof CustomHuman) {
                         $player->sendMessage(TextFormat::RED . "Only human NPC can change cape!");
                         return;
@@ -265,7 +323,7 @@ class FormManager {
                     }
 
                     $plugin->getServer()->getAsyncPool()->submitTask(new URLToCapeTask($cape, $plugin->getDataFolder(), $entity, $player->getName()));
-                } elseif ($skin != "") {
+                } elseif ($skin !== null) {
                     if (!$entity instanceof CustomHuman) {
                         $player->sendMessage(TextFormat::RED . "Only human NPC can change skin!");
                         return;
@@ -281,14 +339,14 @@ class FormManager {
                         return;
                     }
 
-                    if (!preg_match("/^[^\?]+\.(png)(?:\?|$)/", $skin)) {
+                    if (!preg_match('/https?:\/\/[^?]*\.png(?![\w.\-_])/', $skin)) {
                         $player->sendMessage(TextFormat::RED . "Invalid skin url file format! (Only PNG Supported)");
                         return;
                     }
 
                     $plugin->getServer()->getAsyncPool()->submitTask(new URLToSkinTask($player->getName(), $plugin->getDataFolder(), $skin, $entity));
                     $player->sendMessage(TextFormat::GREEN . "Successfully change npc skin (NPC ID: " . $entity->getId() . ")");
-                } elseif ($scale != "") {
+                } elseif ($scale !== null) {
                     if ((float)$scale <= 0) {
                         $player->sendMessage("Scale must be greater than 0");
                         return;

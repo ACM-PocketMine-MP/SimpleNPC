@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace brokiem\snpc\manager\form;
 
-use EasyUI\element\Input;
+use brokiem\snpc\libs\EasyUI\element\Input;
 use pocketmine\utils\SingletonTrait;
 
 class ButtonManager {
@@ -171,6 +171,32 @@ class ButtonManager {
                         "text" => "Hide Nametag",
                         "icon" => null,
                         "function" => "hideNametag",
+                        "force" => true
+                    ]
+                ]
+            ], "Set Click-Emote" => [
+                "text" => "Set Click-Emote",
+                "icon" => null,
+                "element" => [],
+                "additional" => [
+                    "form" => "editUI",
+                    "button" => [
+                        "text" => "Set Click-Emote",
+                        "icon" => null,
+                        "function" => "setClickEmote",
+                        "force" => true
+                    ]
+                ]
+            ], "Set Emote" => [
+                "text" => "Set Emote",
+                "icon" => null,
+                "element" => [],
+                "additional" => [
+                    "form" => "editUI",
+                    "button" => [
+                        "text" => "Set Emote",
+                        "icon" => null,
+                        "function" => "setEmote",
                         "force" => true
                     ]
                 ]
