@@ -7,6 +7,8 @@ authors: [fernanACM, brokiem]
 website: https://github.com/brokiem/SimpleNPC
 
 permissions:
+  simplenpc.cmd:
+    default: op
   simplenpc.spawn:
     default: op
   simplenpc.edit:
